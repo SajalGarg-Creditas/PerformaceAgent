@@ -1,0 +1,75 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Project {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  name     String?
+  repoUrl  String
+  prodUrl  String?
+  uatUrl   String?
+  isActive Boolean  @default(true)
+
+  runs Run[]
+
+  @@unique([repoUrl])
+}
+
+model Run {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /// Idempotency key coming from the pipeline (unique per pipeline execution)
+  runId String @unique
+
+  status String
+
+  beforeMetrics Json?
+  afterMetrics  Json?
+
+  startedAt  DateTime?
+  finishedAt DateTime?
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  issues Issue[]
+  prs    PullRequest[]
+}
+
+model Issue {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  type     String
+  severity String
+  filePath String?
+  ruleId   String?
+  message  String?
+
+  runId String
+  run   Run    @relation(fields: [runId], references: [id], onDelete: Cascade)
+}
+
+model PullRequest {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  repo  String?
+  prUrl String
+  status String
+
+  runId String
+  run   Run    @relation(fields: [runId], references: [id], onDelete: Cascade)
+}
+
